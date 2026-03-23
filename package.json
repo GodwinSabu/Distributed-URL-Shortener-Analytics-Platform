@@ -1,0 +1,22 @@
+{
+  "name": "url-shortener",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^25.5.0",
+    "@types/pg": "^8.20.0"
+  },
+  "peerDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.11",
+    "dotenv": "^17.3.1",
+    "hono": "^4.12.9",
+    "ioredis": "^5.10.1",
+    "pg": "^8.20.0",
+    "zod": "^4.3.6"
+  }
+}
