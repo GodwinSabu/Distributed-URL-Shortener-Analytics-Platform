@@ -7,6 +7,8 @@ import { connectCache, disconnectCache, pingCache } from "./cache";
 import { shortenRouter } from "./routes/shorten";
 import { redirectRouter } from "./routes/redirect";
 import { linksRouter } from "./routes/links";
+import { rateLimitMiddleware } from "./middleware/rateLimitMiddleware";
+import { getRingStatus } from "./lib/nodeRouter";
 
 const app = new Hono();
 
@@ -14,38 +16,40 @@ const app = new Hono();
 app.use("*", logger());
 app.use("*", cors({ origin: "*" }));
 
+// ── Rate limiting — applied to ALL routes globally ────────────────────────────
+// Must be registered BEFORE routes so it runs first
+app.use("*", rateLimitMiddleware);
+
 // ── Health check ───────────────────────────────────────────────────────────────
 app.get("/health", async (c) => {
-  let dbOk = false;
+  let dbOk    = false;
   let cacheOk = false;
 
-  try {
-    await db.query("SELECT 1");
-    dbOk = true;
-  } catch {}
-
+  try { await db.query("SELECT 1"); dbOk = true; } catch {}
   cacheOk = await pingCache();
 
   const status = dbOk && cacheOk ? 200 : 503;
-  return c.json(
-    {
-      status: status === 200 ? "ok" : "degraded",
-      timestamp: new Date().toISOString(),
-      services: {
-        database: dbOk    ? "ok" : "down",
-        cache:    cacheOk ? "ok" : "down",
-      },
+  return c.json({
+    status:    status === 200 ? "ok" : "degraded",
+    timestamp: new Date().toISOString(),
+    services: {
+      database: dbOk    ? "ok" : "down",
+      cache:    cacheOk ? "ok" : "down",
     },
-    status
-  );
+  }, status);
+});
+
+// ── Debug: hash ring status ────────────────────────────────────────────────────
+app.get("/debug/ring", (c) => {
+  return c.json(getRingStatus());
 });
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 app.route("/", shortenRouter);   // POST /shorten
 app.route("/", linksRouter);     // GET/DELETE /api/links
-app.route("/", redirectRouter);  // GET /:code  ← must be last (catch-all)
+app.route("/", redirectRouter);  // GET /:code  ← catch-all, must be last
 
-// ── 404 fallback ───────────────────────────────────────────────────────────────
+// ── Fallbacks ──────────────────────────────────────────────────────────────────
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 app.onError((err, c) => {
   console.error("Unhandled error:", err);
@@ -59,16 +63,15 @@ async function start() {
   try {
     await connectDB();
     await connectCache();
-    console.log(`🚀 URL Shortener running on http://localhost:${PORT}`);
+    console.log(`🚀 URL Shortener [Phase 2] on http://localhost:${PORT}`);
   } catch (err) {
     console.error("Startup failed:", err);
     process.exit(1);
   }
 }
 
-// ── Graceful shutdown ──────────────────────────────────────────────────────────
 async function shutdown(signal: string) {
-  console.log(`\n${signal} received — shutting down gracefully...`);
+  console.log(`\n${signal} — shutting down...`);
   await disconnectDB();
   await disconnectCache();
   process.exit(0);
@@ -79,7 +82,4 @@ process.on("SIGINT",  () => shutdown("SIGINT"));
 
 start();
 
-export default {
-  port: PORT,
-  fetch: app.fetch,
-};
+export default { port: PORT, fetch: app.fetch };
