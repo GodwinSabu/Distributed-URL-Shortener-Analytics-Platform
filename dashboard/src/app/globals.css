@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --chart-1: #6366f1;
@@ -11,5 +9,6 @@
 }
 
 body {
-  @apply bg-slate-950 text-slate-100;
+  background-color: var(--color-slate-950);
+  color: var(--color-slate-100);
 }
