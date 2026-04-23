@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stream-processor
+  namespace: url-shortener
+spec:
+  # Only 1 replica per consumer group partition assignment
+  # Kafka handles the parallelism — don't run more than partition count
+  replicas: 3
+  selector:
+    matchLabels:
+      app: stream-processor
+  template:
+    metadata:
+      labels:
+        app: stream-processor
+    spec:
+      containers:
+        - name: stream-processor
+          image: your-ecr-registry/url-shortener:latest
+          command: ["bun", "run", "src/consumer/streamProcessor.ts"]
+
+          envFrom:
+            - configMapRef:
+                name: url-shortener-config
+            - secretRef:
+                name: url-shortener-secrets
+
+          resources:
+            requests:
+              cpu:    "100m"
+              memory: "128Mi"
+            limits:
+              cpu:    "500m"
+              memory: "256Mi"

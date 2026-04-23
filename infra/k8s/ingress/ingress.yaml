@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: url-shortener-ingress
+  namespace: url-shortener
+  annotations:
+    kubernetes.io/ingress.class:                "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect:   "true"
+    cert-manager.io/cluster-issuer:             "letsencrypt-prod"
+    # Rate limiting at ingress level (backup to app-level Redis limiter)
+    nginx.ingress.kubernetes.io/limit-rps:      "200"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+spec:
+  tls:
+    - hosts:
+        - snip.ly
+        - analytics.snip.ly
+      secretName: snip-ly-tls
+  rules:
+    # Main redirect domain — goes to Bun backend
+    - host: snip.ly
+      http:
+        paths:
+          - path:     /
+            pathType: Prefix
+            backend:
+              service:
+                name: url-shortener
+                port:
+                  number: 80
+
+    # Analytics dashboard
+    - host: analytics.snip.ly
+      http:
+        paths:
+          - path:     /
+            pathType: Prefix
+            backend:
+              service:
+                name: dashboard
+                port:
+                  number: 3001

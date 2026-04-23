@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: url-shortener-config
+  namespace: url-shortener
+data:
+  PORT:                "3000"
+  NODE_ID:             "node-1"
+  REGION_ID:           "us-east"
+  CACHE_TTL_SECONDS:   "3600"
+  KAFKA_CLIENT_ID:     "url-shortener"
+  KAFKA_TOPIC_CLICKS:  "click-events"
+  KAFKA_CONSUMER_GROUP: "click-processor"
+  BASE_URL:            "https://snip.ly"
+  REGION_US_EAST:      "https://us.snip.ly"
+  REGION_EU_WEST:      "https://eu.snip.ly"
+  REGION_AP_SOUTH:     "https://ap.snip.ly"

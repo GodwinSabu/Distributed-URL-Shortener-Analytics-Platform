@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: url-shortener
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: your-ecr-registry/dashboard:latest
+          ports:
+            - containerPort: 3001
+          env:
+            - name:  NEXT_PUBLIC_API_URL
+              value: "https://snip.ly"
+          envFrom:
+            - secretRef:
+                name: url-shortener-secrets
+          resources:
+            requests:
+              cpu:    "100m"
+              memory: "128Mi"
+            limits:
+              cpu:    "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /api/links
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds:       15
